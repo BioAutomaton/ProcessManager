@@ -1,4 +1,4 @@
-from hacker_tools.Queue import Queue
+from hacker_tools.Manager import Queue, Clock
 
 
 def main():
