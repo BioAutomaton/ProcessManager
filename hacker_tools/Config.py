@@ -5,3 +5,6 @@ MIN_DURATION = 10
 MAX_DURATION = 100
 MIN_PROCESS_SIZE = 10
 MAX_PROCESS_SIZE = MEMORY_SIZE // 2
+HACKABLE = (
+    "Pentagon", "Hacker", "Life", "Military", "Python", "World", "USA", "Windows", "Linux", "ONPU", "Zoom", "Google",
+    "Satellite", "Amazon", "Ebay", "Banks")

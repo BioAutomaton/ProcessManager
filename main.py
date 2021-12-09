@@ -1,12 +1,13 @@
-from hacker_tools.Core import Queue, MemoryManager, MemoryBlock
+from hacker_tools.Core import Manager
 
 
 def main():
-    MemoryManager.add(MemoryBlock(0, 128))
-    MemoryManager.show_memory()
-    MemoryManager.fill_memory_block(5)
-    MemoryManager.show_memory()
-
+    manager = Manager(4)
+    manager.generate_process(5)
+    print(manager)
+    manager.kill_process(4)
+    print(manager)
+    pass
 
 if __name__ == "__main__":
     main()
