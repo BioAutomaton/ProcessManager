@@ -4,10 +4,10 @@ from hacker_tools.Core import Manager
 def main():
     manager = Manager(4)
     manager.generate_process(5)
-    manager.do_work()
-    print(manager)
-    manager.generate_process(5)
-    print(manager)
+    for _ in range(10):
+        manager.do_work()
+        print(manager)
+
 
     pass
 
