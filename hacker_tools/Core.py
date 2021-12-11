@@ -35,6 +35,9 @@ class MemoryBlock:
     def size(self):
         return self.end - self.start + 1
 
+    def __str__(self):
+        return f"({self.start}-{self.end})"
+
 
 @dataclass
 class Process:
@@ -67,6 +70,12 @@ class Process:
 
     def is_done(self):
         return self.burst_time >= self.work_required
+
+    def info(self):
+        return self.name, self.id, self.state.name, f"{self.burst_time} / {self.work_required}", self.address
+
+    def short_info(self):
+        return self.name, self.id, self.state.name
 
 
 class MemoryManager:
@@ -203,17 +212,28 @@ class Manager:
         self.CPU = CPU(cpu_cores_n)
         self.memory_manager = MemoryManager()
 
+    def generate_output(self):
+        output = [
+            [process.info() for process in self.process_queue.queue],
+            [process.info() for process in self.rejection_queue.queue],
+            [process.short_info() for process in self.finished_processes]
+        ]
+
+        return output
+
     def __str__(self):
         return f"{str(self.CPU)}\nProcess Queue: \n{str(self.process_queue)}\n" \
                f"Rejection Queue:\n{str(self.rejection_queue)}\n" \
                f"Finished processes: \n{chr(10).join(repr(process) for process in self.finished_processes)}\n" \
                f"Memory: \n{self.memory_manager.show_memory()}"
 
+
     def generate_process(self, quantity=1):
         for _ in range(quantity):
             new_process = Process(self.last_id)
             self.add_process(new_process)
             self.last_id += 1
+
 
     def fill_queue_from_rejects(self):
         for process in self.rejection_queue.queue:
@@ -223,6 +243,7 @@ class Manager:
                 process.address = allocated_memory
                 process.state = ProcessState.ready
                 self.process_queue.add(process)
+
 
     def add_process(self, process):
         allocated_memory = self.memory_manager.fill_memory_block(process.memory)
@@ -234,6 +255,7 @@ class Manager:
             process.state = ProcessState.waiting
             self.rejection_queue.add(process)
 
+
     def kill_process(self, process):
         process = self.process_queue.kill(process) or self.rejection_queue.kill(process)
         if process:
@@ -242,10 +264,12 @@ class Manager:
                 process.address = None
             self.finished_processes.append(process)
 
+
     def do_work(self):
         self.distribute_processes()
 
         finished_processes = self.CPU.do_work()
+        Clock.increment()
         if finished_processes:
             for process in finished_processes:
                 process.state = ProcessState.terminated
@@ -255,6 +279,7 @@ class Manager:
             self.fill_queue_from_rejects()
             #  assign new work to CPU cores
             self.distribute_processes()
+
 
     def distribute_processes(self):
         if self.CPU.is_available():
