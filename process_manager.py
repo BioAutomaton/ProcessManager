@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from hacker_tools.Core import Manager, Config
+from hacker_tools.tools import Manager, config
 
 
 class App(tk.Tk):
@@ -16,17 +16,17 @@ class App(tk.Tk):
 
         #  Define tables and labels
         self.process_queue_label = self.create_label({"row": 0, "column": 0}, "PROCESS QUEUE")
-        self.process_queue = self.create_table({"row": 1, "column": 0}, Config.PROCESS_INFO)
+        self.process_queue = self.create_table({"row": 1, "column": 0}, config.PROCESS_INFO)
 
         self.rejection_queue_label = self.create_label({"row": 2, "column": 0}, "REJECTION QUEUE")
-        self.rejection_queue = self.create_table({"row": 3, "column": 0}, Config.PROCESS_INFO)
+        self.rejection_queue = self.create_table({"row": 3, "column": 0}, config.PROCESS_INFO)
 
         self.cpu_label = self.create_label({"row": 0, "column": 1}, "CPU: tact 0")
         self.cpu_view = self.create_table({"row": 1, "column": 1, "sticky": tk.EW}, ('Core id', "Current Process"))
 
         self.finished_processes_label = self.create_label({"row": 2, "column": 1}, "FINISHED PROCESSES")
         self.finished_processes_view = self.create_table({"row": 3, "column": 1, "sticky": tk.EW},
-                                                         Config.PROCESS_SHORT_INFO)
+                                                         config.PROCESS_SHORT_INFO)
 
         #  add menu bar
         self.menubar = tk.Menu(self)

@@ -2,7 +2,7 @@ import random
 import enum
 from dataclasses import dataclass, field
 
-from hacker_tools import Config
+from hacker_tools import config
 
 
 class Clock:
@@ -56,11 +56,11 @@ class Process:
     address: MemoryBlock = None
 
     def __post_init__(self):
-        self.name = "hack" + random.choice(Config.HACKABLE) + ".exe"
+        self.name = "hack" + random.choice(config.HACKABLE) + ".exe"
         self.time_in = Clock.get_current_time()
-        self.priority = random.randint(Config.MIN_PRIORITY, Config.MAX_PRIORITY)
-        self.work_required = random.randint(Config.MIN_WORK, Config.MAX_WORK)
-        self.memory = random.randint(Config.MIN_PROCESS_SIZE, Config.MAX_PROCESS_SIZE)
+        self.priority = random.randint(config.MIN_PRIORITY, config.MAX_PRIORITY)
+        self.work_required = random.randint(config.MIN_WORK, config.MAX_WORK)
+        self.memory = random.randint(config.MIN_PROCESS_SIZE, config.MAX_PROCESS_SIZE)
 
     def __lt__(self, other):
         return (self.state, self.work_required, self.priority, self.time_in, self.id) < (
@@ -91,7 +91,7 @@ class MemoryManager:
     def find_free_block(self, size):
         self.memory.sort()
         bounded_memory = [MemoryBlock(-1, -1)] + self.memory + \
-                         [MemoryBlock(Config.MEMORY_SIZE + 1, Config.MEMORY_SIZE + 1)]
+                         [MemoryBlock(config.MEMORY_SIZE + 1, config.MEMORY_SIZE + 1)]
 
         suitable_blocks = []
 
