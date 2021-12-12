@@ -6,11 +6,15 @@ from hacker_tools import Config
 
 
 class Clock:
-    time = 0
+    __time = 0
 
     @staticmethod
     def increment(diff=1):
-        Clock.time += diff
+        Clock.__time += diff
+
+    @staticmethod
+    def get_current_time():
+        return Clock.__time
 
 
 class ProcessState(enum.Enum):
@@ -42,7 +46,7 @@ class MemoryBlock:
 @dataclass
 class Process:
     id: int
-    time_in: int = Clock.time
+    time_in: int = field(init=False)
     name: str = field(init=False)
     priority: int = field(init=False)
     work_required: int = field(init=False)
@@ -53,6 +57,7 @@ class Process:
 
     def __post_init__(self):
         self.name = "hack" + random.choice(Config.HACKABLE) + ".exe"
+        self.time_in = Clock.get_current_time()
         self.priority = random.randint(Config.MIN_PRIORITY, Config.MAX_PRIORITY)
         self.work_required = random.randint(Config.MIN_WORK, Config.MAX_WORK)
         self.memory = random.randint(Config.MIN_PROCESS_SIZE, Config.MAX_PROCESS_SIZE)
@@ -72,7 +77,8 @@ class Process:
         return self.burst_time >= self.work_required
 
     def info(self):
-        return self.name, self.id, self.state.name, f"{self.burst_time} / {self.work_required}", self.address
+        return self.name, self.id, self.state.name, f"{self.burst_time} / {self.work_required}", self.memory, \
+               self.address, self.priority, self.time_in
 
     def short_info(self):
         return self.name, self.id, self.state.name
@@ -83,13 +89,14 @@ class MemoryManager:
         self.memory = []
 
     def find_free_block(self, size):
-        bounded_memory = [MemoryBlock(-1, -1)] + sorted(self.memory) + \
+        self.memory.sort()
+        bounded_memory = [MemoryBlock(-1, -1)] + self.memory + \
                          [MemoryBlock(Config.MEMORY_SIZE + 1, Config.MEMORY_SIZE + 1)]
 
         suitable_blocks = []
 
-        for m1, m2 in zip(bounded_memory[0:], bounded_memory[1:]):
-            gap = m2 - m1
+        for block_1, block_2 in zip(bounded_memory[0:], bounded_memory[1:]):
+            gap = block_2 - block_1
             if gap.size() >= size:
                 suitable_blocks.append(gap)
 
@@ -110,7 +117,7 @@ class MemoryManager:
     def add(self, new_block):
         self.memory.append(new_block)
 
-    def show_memory(self):
+    def output(self):
         return sorted(self.memory)
 
 
@@ -151,6 +158,9 @@ class Queue:
     def __str__(self):
         return "[" + "\n".join(repr(p) for p in self.queue) + "]"
 
+    def output(self):
+        return [process.info() for process in self.queue]
+
 
 @dataclass
 class Core:
@@ -158,7 +168,10 @@ class Core:
     current_process: Process = None
 
     def status_str(self):
-        return "Busy" if self.current_process else "Free"
+        return "Busy: " + self.current_process.name if self.current_process else "Free"
+
+    def status(self):
+        return self.id, (self.current_process.name if self.current_process else None)
 
     def do_work(self):
         if self.current_process:
@@ -185,7 +198,7 @@ class CPU:
         self.cores = [Core(i) for i in range(cores_n)]
 
     def distribute_processes(self, queue):
-        for i, core in enumerate(self.cores):
+        for core in self.cores:
             process = queue.get_first_ready()
             if process:
                 core.assign_job(process)
@@ -197,6 +210,9 @@ class CPU:
 
     def is_available(self):
         return any(core.is_available() for core in self.cores)
+
+    def status(self):
+        return [core.status() for core in self.cores]
 
     def __str__(self):
         return "\n".join(str(core) for core in self.cores)
@@ -213,11 +229,14 @@ class Manager:
         self.memory_manager = MemoryManager()
 
     def generate_output(self):
-        output = [
-            [process.info() for process in self.process_queue.queue],
-            [process.info() for process in self.rejection_queue.queue],
-            [process.short_info() for process in self.finished_processes]
-        ]
+        output = {
+            "process_queue": self.process_queue.output(),
+            "rejection_queue": self.rejection_queue.output(),
+            "finished_processes": [process.short_info() for process in self.finished_processes],
+            "cpu": self.CPU.status(),
+            "memory": self.memory_manager.output(),
+            "current_tact": Clock.get_current_time()
+        }
 
         return output
 
@@ -225,15 +244,13 @@ class Manager:
         return f"{str(self.CPU)}\nProcess Queue: \n{str(self.process_queue)}\n" \
                f"Rejection Queue:\n{str(self.rejection_queue)}\n" \
                f"Finished processes: \n{chr(10).join(repr(process) for process in self.finished_processes)}\n" \
-               f"Memory: \n{self.memory_manager.show_memory()}"
-
+               f"Memory: \n{self.memory_manager.output()}"
 
     def generate_process(self, quantity=1):
         for _ in range(quantity):
             new_process = Process(self.last_id)
             self.add_process(new_process)
             self.last_id += 1
-
 
     def fill_queue_from_rejects(self):
         for process in self.rejection_queue.queue:
@@ -243,7 +260,6 @@ class Manager:
                 process.address = allocated_memory
                 process.state = ProcessState.ready
                 self.process_queue.add(process)
-
 
     def add_process(self, process):
         allocated_memory = self.memory_manager.fill_memory_block(process.memory)
@@ -255,7 +271,6 @@ class Manager:
             process.state = ProcessState.waiting
             self.rejection_queue.add(process)
 
-
     def kill_process(self, process):
         process = self.process_queue.kill(process) or self.rejection_queue.kill(process)
         if process:
@@ -263,7 +278,6 @@ class Manager:
                 self.memory_manager.release_memory_block(process.address)
                 process.address = None
             self.finished_processes.append(process)
-
 
     def do_work(self):
         self.distribute_processes()
@@ -279,7 +293,6 @@ class Manager:
             self.fill_queue_from_rejects()
             #  assign new work to CPU cores
             self.distribute_processes()
-
 
     def distribute_processes(self):
         if self.CPU.is_available():
