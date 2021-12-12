@@ -67,8 +67,8 @@ class Process:
             other.state, other.work_required, other.priority, other.time_in, other.id)
 
     def __gt__(self, other):
-        return (self.state, self.work_required, self.priority, self.time_in, self.id) > (
-            other.state, other.work_required, other.priority, other.time_in, other.id)
+        return (self.state, self.work_required, self.memory, self.priority, self.time_in, self.id) > (
+            other.state, other.work_required, other.memory, other.priority, other.time_in, other.id)
 
     def __eq__(self, other):
         return self.id == other.id
@@ -237,6 +237,10 @@ class Manager:
             "memory": self.memory_manager.output(),
             "current_tact": Clock.get_current_time()
         }
+
+        output["process_len"] = len(output["process_queue"])
+        output["rejection_len"] = len(output["rejection_queue"])
+        output["finished_len"] = len(output["finished_processes"])
 
         return output
 

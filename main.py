@@ -14,7 +14,7 @@ class App(tk.Tk):
         self.title('HackerTools')
         self.resizable(0, 0)
 
-        #  DEFINE TABLES AND LABELS
+        #  Define tables and labels
         self.process_queue_label = self.create_label({"row": 0, "column": 0}, "PROCESS QUEUE")
         self.process_queue = self.create_table({"row": 1, "column": 0}, Config.PROCESS_INFO)
 
@@ -28,19 +28,40 @@ class App(tk.Tk):
         self.finished_processes_view = self.create_table({"row": 3, "column": 1, "sticky": tk.EW},
                                                          Config.PROCESS_SHORT_INFO)
 
+        #  add menu bar
         self.menubar = tk.Menu(self)
         self.controls = tk.Menu(self.menubar, tearoff=0)
-        self.controls.add_command(label="Start/Stop", command=self.switch_state, accelerator="Ctrl+S")
+
         self.controls.add_command(label="Next tact", command=self.tick, accelerator="Ctrl+T")
         self.controls.add_command(label="New Process", command=self.generate_process, accelerator="Ctrl+N")
         self.menubar.add_cascade(label="Controls", menu=self.controls)
-        self.config(menu=self.menubar)
 
+        self.autorun_menu = tk.Menu(self.menubar, tearoff=0)
+        self.autorun_menu.add_command(label="Start/Stop", command=self.switch_state, accelerator="Ctrl+S")
+        self.autorun_menu.add_command(label="Speed up", command=self.decrease_interval, accelerator="Ctrl+Up")
+        self.autorun_menu.add_command(label="Slow down", command=self.increase_interval, accelerator="Ctrl+Down")
+        self.autorun_menu.add_command(label="Default speed", command=self.default_interval, accelerator="Ctrl+Home")
+        self.menubar.add_cascade(label="Autorun", menu=self.autorun_menu)
+
+        self.config(menu=self.menubar)
         self.bind_all("<Control-s>", self.switch_state)
         self.bind_all("<Control-t>", self.tick)
         self.bind_all("<Control-n>", self.generate_process)
+        self.bind_all("<Control-Up>", self.decrease_interval)
+        self.bind_all("<Control-Home>", self.default_interval)
+        self.bind_all("<Control-Down>", self.increase_interval)
 
         self.show_data()
+        self.autorun()
+
+    def default_interval(self, event=None):
+        self.interval = 1024
+
+    def decrease_interval(self, event=None):
+        self.interval = self.interval // 2 if self.interval > 16 else 16
+
+    def increase_interval(self, event=None):
+        self.interval = self.interval * 2 if self.interval < 16384 else 16384
 
     def create_button(self, grid, text, command):
         button = ttk.Button(self, text=text, command=command)
@@ -84,6 +105,11 @@ class App(tk.Tk):
         for core in data["cpu"]:
             self.cpu_view.insert('', tk.END, values=core)
 
+        self.cpu_label["text"] = f"CPU: tact {data['current_tact']}"
+        self.process_queue_label["text"] = f"PROCESS QUEUE: {data['process_len']}"
+        self.rejection_queue_label["text"] = f"REJECTION QUEUE: {data['rejection_len']}"
+        self.finished_processes_label["text"] = f"FINISHED PROCESSES: {data['finished_len']}"
+
     def clear_tables(self):
         self.process_queue.delete(*self.process_queue.get_children())
         self.rejection_queue.delete(*self.rejection_queue.get_children())
@@ -104,6 +130,7 @@ class App(tk.Tk):
     def autorun(self):
         if self.running:
             self.tick()
+        self.after(self.interval, self.autorun)
 
 
 def main():
